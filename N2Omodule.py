@@ -11,6 +11,7 @@ from re import compile, search
 from csv import DictReader
 from pathlib import Path
 
+
 def notion_mix_decoded_string_convert(string):
 
     regexSpecialUtf8 = compile("%([A-F0-9][A-F0-9])")
@@ -32,7 +33,7 @@ def notion_mix_decoded_string_convert(string):
 
 def str_slash_char_remove(string):
 
-    #regex_forbidden_characters = compile('[\\/*?:"<>|]')
+    # regex_forbidden_characters = compile('[\\/*?:"<>|]')
     regexSlash = compile("\/")
     string = regexSlash.sub('', string)
 
@@ -41,7 +42,7 @@ def str_slash_char_remove(string):
 
 def str_forbid_char_remove(string):
 
-    #regex_forbidden_characters = compile('[\\/*?:"<>|]')
+    # regex_forbidden_characters = compile('[\\/*?:"<>|]')
     regex_forbidden_characters = compile('[\\*?:"<>|]')
     string = regex_forbidden_characters.sub('', string)
 
@@ -67,57 +68,54 @@ def str_notion_uid_remove(string):
 
 def ObsIndex(contents):
     """
-    Function to return all the relevant indices 
+    Function to return all the relevant indices
     Requires: contents are pre-conditioned by pathlib.Path()
     Returns: (mdIndex, csvIndex, othersIndex, folderIndex, folderTree)
     """
-    
-    ## index the directory structure
+
+    # index the directory structure
     folderIndex = []
     folderTree = []
 
     for line in enumerate(contents):
         if path.isdir(line[1]):
-            folderIndex.append(line[0]) #save index
+            folderIndex.append(line[0])  #save index
             folderTree.append(line[1])
-    ## Case: directories are implicit
+    # Case: directories are implicit
     if not folderIndex:
         Tree = list(set([path.dirname(x) for x in contents]))
         [folderTree.append(Path(l)) for l in Tree]
 
-    
-    ## Index the .md files
+    # Index the .md files
     mdIndex = []
     for line in enumerate(contents):
         if line[1].suffix == ".md":
-            mdIndex.append(line[0]) #save index
-    
-    
-    ## Index the .csv files
+            mdIndex.append(line[0])  # save index
+
+    # Index the .csv files
     csvIndex = []
     for line in enumerate(contents):
         if line[1].suffix == ".csv":
-            csvIndex.append(line[0]) #save index
+            csvIndex.append(line[0])  # save index
 
-    
-    ## index the other files using set difference
-    othersIndex = list(set(range(0,len(contents)))
-        - (set(folderIndex)|set(mdIndex)|set(csvIndex)))
-    
+    # index the other files using set difference
+    othersIndex = list(set(range(0, len(contents)))
+        - (set(folderIndex) | set(mdIndex) | set(csvIndex)))
+
     return mdIndex, csvIndex, othersIndex, folderIndex, folderTree
 
 
 def N2Ocsv(csvFile):
-    
+
     # Convert csv to dictionary object
     reader = DictReader(TextIOWrapper(csvFile, "utf-8-sig"), delimiter=',', quotechar='"')
-   
+
     dictionry = {}
-    for row in reader: # I don't know how this works but it does what I want
+    for row in reader:  # I don't know how this works but it does what I want
         for column, value in row.items():
             dictionry.setdefault(column, []).append(value)
-           
-    IntLinks = list(dictionry.keys())[0] # Only want 1st column header    
+
+    IntLinks = list(dictionry.keys())[0]  # Only want 1st column header    
     oldTitle = dictionry.get(IntLinks)
 
     Title = []
@@ -133,9 +131,9 @@ def N2Ocsv(csvFile):
     for line in oldTitle:
         line = line.rstrip()
         #1 Replace URL identifiers and/or symbols with a space
-        line = regexURLid.sub(" ",line)
-        line = regexSymbols.sub("",line)
-         #2 Remove duplicate spaces
+        line = regexURLid.sub(" ", line)
+        line = regexSymbols.sub("", line)
+        #2 Remove duplicate spaces
         line = regexSpaces.sub(" ", line) 
         #3 Remove any spaces at beginning
         line = line.lstrip()
@@ -145,51 +143,52 @@ def N2Ocsv(csvFile):
         line = line.rstrip()    
         if line:
             Title.append(line)
-    
-    ## convert Titles to [[internal link]]
+
+    # convert Titles to [[internal link]]
     for line in Title:
         mdTitle.append("[["+line+"]] ")
-    
+
     return mdTitle
 
 
 def convertBlankLink(line):
-# converts Notion about:blank links (found by regex) to Obsidian pretty links
+    # converts Notion about:blank links (found by regex) to Obsidian pretty links
 
     regexSymbols = compile("[^\w\s]")
     regexSpaces = compile("\s+")
     num_matchs = 0
     # about:blank links (lost or missing links within Notion)
-    ## Group1:Pretty Link Title
+    # Group1:Pretty Link Title
     regexBlankLink = compile("\[(.[^\[\]\(\)]*)\]\(about:blank#.[^\[\]\(\)]*\)")
     matchBlank = regexBlankLink.search(line) 
     if matchBlank:
 
         InternalTitle = matchBlank.group(1)
-        
+
         # Replace symbols with space
         InternalLink = regexSymbols.sub(" ",InternalTitle)
-        
+
         # Remove duplicate spaces
         InternalLink = regexSpaces.sub( " ", InternalLink)
-        
+
         # Remove any spaces at beginning
         InternalLink = InternalLink.lstrip()
-        
+
         # Cut title at 50 characters
         InternalLink = InternalLink[0:50]
-        
+
         # Remove any spaces at end
         InternalLink = InternalLink.rstrip()
-        
+
         # Reconstruct Internal Links as pretty links
         PrettyLink = "[["+InternalLink+"]] "
-        
+
         line, num_matchs = regexBlankLink.subn(PrettyLink, line)        
         if num_matchs > 1:
             print(f"Warning: {line} replaced {num_matchs} matchs!!")
-            
+
     return line, num_matchs
+
 
 def embedded_link_convert(line):
     '''
@@ -199,32 +198,22 @@ def embedded_link_convert(line):
     - Link to Database ~ exported *.csv file
     - png in notion
     '''
-
-    # folder style links
-    #regexPath =     compile("^\[(.+)\]\(([^\(]*)(?:\.md|\.csv)\)$") # Overlap incase multiple links in same line
-    #regexRelativePathImage  =   compile("(?:\.png|\.jpg|\.gif|\.bmp|\.jpeg|\.svg)")
-
-    regexPath               =   compile("!\[(.*?)\]\((.*?)\)")
-    regex20                 =   compile("%20")
-
+    regexPath = compile("!\[(.*?)\]\((.*?)\)")
     num_matchs = 0
+
     # Identify and group relative paths
     # While for incase multiple match on single line
     pathMatch = regexPath.search(line)
     if pathMatch:
         # modify paths into local links. just remove UID and convert spaces
-        Title = pathMatch.group(1)
         relativePath = pathMatch.group(2)
-        #is_image = regexRelativePathImage.search(relativePath)
+        regexutf8 = compile("%([A-F0-9][A-F0-9])%([A-F0-9][A-F0-9])")
+        regexUID = compile("%20\w{32}")
 
-        regexSpecialUtf8 = compile("%([A-F0-9][A-F0-9])%([A-F0-9][A-F0-9])%([A-F0-9][A-F0-9])")
-        regexutf8 =    compile("%([A-F0-9][A-F0-9])%([A-F0-9][A-F0-9])")
-        regexUID =      compile("%20\w{32}")
-        
         relativePath = str_forbid_char_remove(relativePath)
         relativePath = regexUID.sub("", relativePath)
         relativePath = str_space_utf8_replace(relativePath)
-        
+
         utf8_match = regexutf8.search(relativePath)
         if utf8_match:
             relativePath = notion_mix_decoded_string_convert(relativePath)
@@ -247,12 +236,10 @@ def internal_link_convert(line):
     '''
 
     # folder style links
-    #regexPath =     compile("^\[(.+)\]\(([^\(]*)(?:\.md|\.csv)\)$") # Overlap incase multiple links in same line
+    # regexPath =     compile("^\[(.+)\]\(([^\(]*)(?:\.md|\.csv)\)$") # Overlap incase multiple links in same line
     regexPath               =   compile("\[(.*?)\]\((.*?)\)")
-    regex20                 =   compile("%20")
     regexRelativePathNotion =   compile("https:\/\/www\.notion\.so")
     regexRelativePathMdCsv  =   compile("(?:\.md|\.csv)")
-    regexRelativePathImage  =   compile("(?:\.png|\.jpg|\.gif|\.bmp|\.jpeg|\.svg)")
 
     num_matchs = 0
     # Identify and group relative paths
@@ -266,10 +253,10 @@ def internal_link_convert(line):
         is_md_or_csv = regexRelativePathMdCsv.search(relativePath)
 
         if is_md_or_csv or notionMatch:
-            # Replace all matchs 
+            # Replace all matchs
             # line = regexPath.sub("[["+<group 1>+"]]", line)
             line, num_matchs = regexPath.subn("[["+'\\1'''+"]]", line)
-            
+
             regexMarkdownLink = compile("\[\[(.*?)\]\]")
             markdownLinkMatch = regexMarkdownLink.search(line)
             if markdownLinkMatch:
@@ -291,10 +278,10 @@ def feature_tags_convert(line):
 
     # Convert tags after lines starting with "Tags:"
     regexTags = "^Tags:\s(.+)"
-    
-        # Search for Internal Links. Will give match.group(1) & match.group(2)
-    tagMatch = search(regexTags,line)
-    
+
+    # Search for Internal Links. Will give match.group(1) & match.group(2)
+    tagMatch = search(regexTags, line)
+
     Otags = []
     num_tag = 0
     if tagMatch:
@@ -303,7 +290,7 @@ def feature_tags_convert(line):
             Otags.append("#"+t[1].strip())
             num_tag += 1
         line = "Tags: "+", ".join(Otags)
-    
+
     return line, num_tag
 
 
@@ -332,10 +319,5 @@ def N2Omd(mdFile):
         tags_cnt += cnt
 
         newLines.append(line)
-    
 
-
-    return newLines, [in_link_cnt, em_link_cnt, bl_link_cnt,tags_cnt]
-
-    
-    
+    return newLines, [in_link_cnt, em_link_cnt, bl_link_cnt, tags_cnt]
