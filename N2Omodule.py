@@ -287,7 +287,7 @@ def feature_tags_convert(line):
     if tagMatch:
         Ntags = tagMatch.group(1).split(",")
         for t in enumerate(Ntags):
-            Otags.append("#"+t[1].strip())
+            Otags.append(t[1].strip())
             num_tag += 1
         line = "Tags: "+", ".join(Otags)
 

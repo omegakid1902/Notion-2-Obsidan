@@ -52,9 +52,7 @@ for line in NotionPathRaw:
         ObsidianUIDs.append("")
 
     ObsidianPathRaw.append(regexUID.sub("", line).rstrip())
-    print(line)
-    print(ObsidianPathRaw[-1])
-    print(ObsidianUIDs[-1])
+
 
 # PATHS IN PROPER OS FORM BY PATHLIB ###
 [NotionPaths.append(Path(line)) for line in NotionPathRaw]
@@ -143,27 +141,33 @@ for n in mdIndex:
             yaml_start = indexes[0]
         if len(indexes) > 1:
             yaml_end = indexes[1]
+        else:
+            yaml_end = len(mdContent)
 
-        print(yaml_start, yaml_end)
         # Save modified content as new .md file
-        with open(newfilepath, append_write, encoding='utf-8') as tempFile:
+        try:
+            with open(newfilepath, append_write, encoding='utf-8') as tempFile:
+                if config.N2O_features["yaml"]:
+                    print("---", file=tempFile)
+                    print("title: '"+mdContent[0][2:] + "'", file=tempFile)
+                    if config.N2O_features["save_uid"]:
+                        print("notion_url: https://www.notion.so/" + ObsidianUIDs[n], file=tempFile)
+                    for i in range(yaml_start+1, yaml_end):
+                        two_parts = mdContent[i].rstrip().split(":")
+                        if len(two_parts) >= 2 and two_parts[1] != "":
+                            if two_parts[0][0] != "_":
+                                print(mdContent[i].rstrip(), file=tempFile)
+                        else:
+                            break
+                    print("---", file=tempFile)
 
-            if config.N2O_features["yaml"]:
-                print("---", file=tempFile)
-                print("title: "+mdContent[0][2:], file=tempFile)
-                if config.N2O_features["save_uid"]:
-                    print("Notion_UID: " + ObsidianUIDs[n], file=tempFile)
-                for i in range(yaml_start+1, yaml_end):
-                    print(mdContent[i].rstrip())
-                    print(mdContent[i].rstrip(), file=tempFile)
-                print("---", file=tempFile)
-
-            for line in mdContent:
-                if yaml_end == 0 or line == "":
-                    print(line.rstrip(), file=tempFile)
-                elif ((yaml_end <= mdContent.index(line)) or (mdContent.index(line) <= yaml_start)):
-                    print(line.rstrip(), file=tempFile)
-
+                for line in mdContent:
+                    if yaml_end == 0 or line == "":
+                        print(line.rstrip(), file=tempFile)
+                    elif ((yaml_end <= mdContent.index(line)) or (mdContent.index(line) <= yaml_start)):
+                        print(line.rstrip(), file=tempFile)
+        except FileNotFoundError:
+            print("CRITICAL ERROR: FILE not found")
 
 # Process all attachment files using othersIndex ####
 for n in othersIndex:
